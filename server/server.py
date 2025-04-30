@@ -1,6 +1,6 @@
 from flask import Flask
 from data import db_session
-
+from data.ads import Ads
 
 app = Flask(__name__)
 
