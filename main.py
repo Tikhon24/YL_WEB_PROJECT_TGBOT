@@ -1,13 +1,16 @@
 # бот
-import requests
+import os
 import asyncio
 from aiogram import Bot, Dispatcher
+from dotenv import load_dotenv
 
 from app.handlers import router
 
-TOKEN_API = "8045924051:AAH0OKdt2dqkjQvRXII_CyhmfbxC_wbMaiI"
+load_dotenv()
 
-bot = Bot(TOKEN_API)
+TOKEN = os.getenv("TOKEN")
+
+bot = Bot(TOKEN)
 dp = Dispatcher()
 
 
