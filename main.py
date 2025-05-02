@@ -1,5 +1,4 @@
 # бот
-import requests
 import os
 import asyncio
 from aiogram import Bot, Dispatcher

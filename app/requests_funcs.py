@@ -1,0 +1,20 @@
+import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+SERVER = os.getenv("SERVER")
+
+
+def get(rout):
+    try:
+        response = requests.get(f"{SERVER}{rout}")
+        response.raise_for_status()
+
+        data = response.json()
+        return data
+    except requests.exceptions.HTTPError as http_ex:
+        print(f"HTTP ошибка: {http_ex}")
+    except Exception as ex:
+        print(f"Ошибка: {ex}")
