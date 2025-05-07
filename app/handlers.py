@@ -4,6 +4,8 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 
+from create_bot import bot
+
 import app.other_funcs as of
 import app.requests_funcs as rf
 
@@ -17,6 +19,9 @@ class AddAdForm(StatesGroup):
     description = State()
     image = State()
     price = State()
+    user_tag = State()
+    ads_id = State()
+
 
 
 @router.message(CommandStart())
@@ -63,28 +68,36 @@ async def process_no_image(callback_query: CallbackQuery, state: FSMContext):
     await state.set_state(AddAdForm.price)
     await callback_query.message.answer("Введите цену товара(₽):")
 
-class AdData(StatesGroup):
-    data = State()
-
 
 @router.message(AddAdForm.price)
 async def add_ad_fifth(message: Message, state: FSMContext):
     try:
         price = int(message.text)
+        user_tag = message.from_user.username
+        ads_id = 00000  # rf.get("/get_ad_id")['ad_id']
+
         await state.update_data(price=price)
+        await state.update_data(user_tag=user_tag)
+        await state.update_data(ads_id=ads_id)
+
         data = await state.get_data()
-        data["user_tag"] = message.from_user.username
-        data["ads_id"] = rf.get("/get_ad_id")['ad_id']
         ad_message, image_id = await of.create_ad_message(data)
         await message.answer_photo(photo=image_id, caption=ad_message, parse_mode='Markdown', reply_markup=kb.ready_ad)
-        await state.set_state(AdData.data)
-        await state.update_data(data=data)
     except ValueError:
         await message.answer("Пожалуйста, введите корректную цену (число). Попробуйте снова:")
 
 
 @router.callback_query(lambda c: c.data == "publish")
-async def publish(callback: CallbackQuery):
+async def publish(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    data = data.get("data")
-    print(data)
+    ad_message, image_id = await of.create_ad_message(data)
+    publish_ad = await bot.send_photo(chat_id="@YL_WEB_PROJECT_TGBO",
+                                      photo=image_id, caption=ad_message, parse_mode='Markdown')
+    data["message_id"] = publish_ad.message_id
+    # rf.post("/some_rout", data)
+    await callback.answer()
+    await callback.message.delete()
+    await callback.message.answer(f"Опубликовано✅\n\n[обявление]"
+                                     f"(https://t.me/YL_WEB_PROJECT_TGBO/{publish_ad.message_id})",
+                                     parse_mode='Markdown')
+

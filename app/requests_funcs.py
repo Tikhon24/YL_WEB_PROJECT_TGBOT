@@ -18,3 +18,16 @@ def get(rout):
         print(f"HTTP ошибка: {http_ex}")
     except Exception as ex:
         print(f"Ошибка: {ex}")
+
+
+def post(rout, payload):
+    try:
+        response = requests.post(f"{SERVER}{rout}", json=payload)
+        response.raise_for_status()
+
+        data = response.json()
+        return data
+    except requests.exceptions.HTTPError as http_ex:
+        print(f"HTTP ошибка: {http_ex}")
+    except Exception as ex:
+        print(f"Ошибка: {ex}")
