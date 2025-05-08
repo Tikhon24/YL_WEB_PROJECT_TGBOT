@@ -23,7 +23,6 @@ class AddAdForm(StatesGroup):
     ads_id = State()
 
 
-
 @router.message(CommandStart())
 async def start(message: Message) -> None:
     await message.answer("*старт*", reply_markup=kb.start)
@@ -56,9 +55,12 @@ async def add_ad_third(message: Message, state: FSMContext):
 
 @router.message(AddAdForm.image)
 async def add_ad_fourth1(message: Message, state: FSMContext):
-    await state.update_data(image=message.photo[-1].file_id)
-    await state.set_state(AddAdForm.price)
-    await message.answer("Введите цену товара(₽):")
+    if message.photo:
+        await state.update_data(image=message.photo[-1].file_id)
+        await state.set_state(AddAdForm.price)
+        await message.answer("Введите цену товара(₽):")
+    else:
+        await message.answer("Пожалуйста, отправьте фото.")
 
 
 @router.callback_query(lambda c: c.data == "no_image")
@@ -74,7 +76,7 @@ async def add_ad_fifth(message: Message, state: FSMContext):
     try:
         price = int(message.text)
         user_tag = message.from_user.username
-        ads_id = 00000  # rf.get("/get_ad_id")['ad_id']
+        ads_id = rf.get("/get_ad_id")['ad_id']
 
         await state.update_data(price=price)
         await state.update_data(user_tag=user_tag)
@@ -82,7 +84,15 @@ async def add_ad_fifth(message: Message, state: FSMContext):
 
         data = await state.get_data()
         ad_message, image_id = await of.create_ad_message(data)
-        await message.answer_photo(photo=image_id, caption=ad_message, parse_mode='Markdown', reply_markup=kb.ready_ad)
+        print(data)
+
+        if image_id:  # Check if image_id is not empty
+            await message.answer_photo(photo=image_id, caption=ad_message, parse_mode='Markdown',
+                                       reply_markup=kb.ready_ad)
+        else:
+            await message.answer(ad_message, parse_mode='Markdown', reply_markup=kb.ready_ad)
+
+        await state.clear()
     except ValueError:
         await message.answer("Пожалуйста, введите корректную цену (число). Попробуйте снова:")
 
@@ -90,14 +100,27 @@ async def add_ad_fifth(message: Message, state: FSMContext):
 @router.callback_query(lambda c: c.data == "publish")
 async def publish(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
+    print(data)
     ad_message, image_id = await of.create_ad_message(data)
-    publish_ad = await bot.send_photo(chat_id="@YL_WEB_PROJECT_TGBO",
-                                      photo=image_id, caption=ad_message, parse_mode='Markdown')
-    data["message_id"] = publish_ad.message_id
-    # rf.post("/some_rout", data)
+    if image_id == "":
+        publish_ad = await bot.send_message(chat_id="@YL_WEB_PROJECT_TGBO", caption=ad_message, parse_mode='Markdown')
+    else:
+        publish_ad = await bot.send_photo(chat_id="@YL_WEB_PROJECT_TGBO",
+                                          photo=image_id, caption=ad_message, parse_mode='Markdown')
+    message_id = publish_ad.message_id
+    print(message_id)
+    data["message_id"] = message_id
+    result = rf.post("/add_ad", data)
+    print(result)
     await callback.answer()
     await callback.message.delete()
-    await callback.message.answer(f"Опубликовано✅\n\n[обявление]"
-                                     f"(https://t.me/YL_WEB_PROJECT_TGBO/{publish_ad.message_id})",
-                                     parse_mode='Markdown')
+    if result["status"] == "OK":
+        await callback.message.answer(f"Опубликовано✅\n\n[обявление]"
+                                      f"(https://t.me/YL_WEB_PROJECT_TGBO/{publish_ad.message_id})",
+                                      parse_mode='Markdown')
+    else:
+        await bot.delete_message(chat_id="@YL_WEB_PROJECT_TGBO", message_id=message_id)
+        await callback.message.answer("*Произошла ошибка, попробуйте позже!*",
+                                      parse_mode='Markdown')
+
 
