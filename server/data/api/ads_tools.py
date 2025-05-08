@@ -25,7 +25,7 @@ class AdsMaster:
     def set_ad_id(self, id):
         self.ad_id = id
 
-    def get_ad_by_id(self):
+    def get_ad_by_id(self) -> dict:
         ad = self.db_sess.query(Ads).filter(Ads.ads_id == self.get_ad_id()).first()
         data = {
             'title': ad.title,
@@ -37,7 +37,7 @@ class AdsMaster:
             'ads_id': ad.ads_id,
             'message_id': ad.message_id
         }
-        return jsonify(data)
+        return data
 
     def find_ad_id(self) -> bool:
         ad = self.db_sess.query(Ads).filter(Ads.ads_id == self.get_ad_id()).first()
@@ -47,7 +47,17 @@ class AdsMaster:
 
 
 class AdsDelete(AdsMaster):
-    pass
+    """Операции удаления в бд"""
+
+    def delete_ad(self):
+        """Удаление определенного объявления по айди товара"""
+        try:
+            self.db_sess.query(Ads).filter(Ads.ads_id == self.get_ad_id()).delete()
+            self.db_sess.commit()
+            return True
+        except Exception as ex:
+            print(ex)
+            return False
 
 
 class AdsPut(AdsMaster):

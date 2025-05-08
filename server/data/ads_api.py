@@ -46,3 +46,22 @@ def get_ad_id():
     while master.find_ad_id():
         ad_id = master.create_ad_id()
     return jsonify({'ad_id': ad_id})
+
+
+@blueprint.route('/get_ad/<ad_id>', methods=['GET'])
+def get_ad(ad_id):
+    """Отдает объявление по айди товара"""
+    db_sess = db_session.create_session()
+    master = AdsMaster(db_sess, ad_id)
+    data = master.get_ad_by_id()
+    return jsonify(data)
+
+
+@blueprint.route('/delete_ad/<ad_id>', methods=['DELETE'])
+def delete_ad(ad_id):
+    """Удаляет объявление из бд по айди товара"""
+    db_sess = db_session.create_session()
+    master = AdsDelete(db_sess, ad_id)
+    if master.delete_ad():
+        return jsonify({'status': 'OK'})
+    return jsonify({'status': 'ERROR'})
