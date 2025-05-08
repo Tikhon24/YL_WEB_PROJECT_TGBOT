@@ -7,9 +7,9 @@ load_dotenv()
 SERVER = os.getenv("SERVER")
 
 
-def get(rout):
+def get(route):
     try:
-        response = requests.get(f"{SERVER}{rout}")
+        response = requests.get(f"{SERVER}{route}")
         response.raise_for_status()
 
         data = response.json()
