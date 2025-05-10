@@ -74,26 +74,27 @@ async def process_no_image(callback_query: CallbackQuery, state: FSMContext):
 @router.message(AddAdForm.price)
 async def add_ad_fifth(message: Message, state: FSMContext):
     try:
-        price = int(message.text)
+        price = int(message.text)  # проверка на число
         user_tag = message.from_user.username
-        ads_id = rf.get("/get_ad_id")['ad_id']
+        ads_id = rf.get("/get_ad_id")['ad_id']  # запрос id товара
 
         await state.update_data(price=price)
         await state.update_data(user_tag=user_tag)
         await state.update_data(ads_id=ads_id)
+        # добавление остальной инфы
 
         data = await state.get_data()
-        ad_message, image_id = await of.create_ad_message(data)
+        ad_message, image_id = await of.create_ad_message(data)  # создание объявления
         print(data)
 
-        if image_id:  # Check if image_id is not empty
+        if image_id:  # проверка наличия фото
             await message.answer_photo(photo=image_id, caption=ad_message, parse_mode='Markdown',
                                        reply_markup=kb.ready_ad)
         else:
             await message.answer(ad_message, parse_mode='Markdown', reply_markup=kb.ready_ad)
 
-        await state.clear()
-    except ValueError:
+        await state.set_state(None)
+    except ValueError:  # работает при ошибка с преобразованием в число (строка 77)
         await message.answer("Пожалуйста, введите корректную цену (число). Попробуйте снова:")
 
 
