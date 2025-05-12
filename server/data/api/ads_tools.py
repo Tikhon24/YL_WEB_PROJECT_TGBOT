@@ -62,3 +62,33 @@ class AdsDelete(AdsMaster):
 
 class AdsPut(AdsMaster):
     pass
+
+
+class AdsGet(AdsMaster):
+    """Операции по возврату объявлений из бд"""
+
+    def get_by_title(self, title):
+        """Возвращает все объявления с указанным названием"""
+        try:
+            ads = self.db_sess.query(Ads).filter(Ads.title == title).all()
+            result = [item.to_dict() for item in ads]
+            print(result)
+            return {
+                'ads': result
+            }
+        except Exception as ex:
+            print(ex)
+            return {'status': 'ERROR', 'ads': []}
+
+    def get_by_price(self, price):
+        """Возвращает все объявления с указанной ценой"""
+        try:
+            ads = self.db_sess.query(Ads).filter(Ads.price == price).all()
+            result = [item.to_dict() for item in ads]
+            print(result)
+            return {
+                'ads': result
+            }
+        except Exception as ex:
+            print(ex)
+            return {'status': 'ERROR'}

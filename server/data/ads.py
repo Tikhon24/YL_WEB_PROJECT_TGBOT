@@ -1,9 +1,11 @@
 import datetime
 import sqlalchemy
+from sqlalchemy_serializer import SerializerMixin
+
 from .db_session import SqlAlchemyBase
 
 
-class Ads(SqlAlchemyBase):
+class Ads(SqlAlchemyBase, SerializerMixin):
     """Шаблон бд для объявлений в канале"""
     __tablename__ = 'ads'
 

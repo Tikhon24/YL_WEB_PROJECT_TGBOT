@@ -5,7 +5,7 @@ if __name__ != '__main__':
     # импорты для запуска файла извне
     from data import db_session
     from data.ads import Ads
-    from data.api.ads_tools import AdsMaster, AdsDelete, AdsPut
+    from data.api.ads_tools import AdsMaster, AdsDelete, AdsPut, AdsGet
 
 blueprint = flask.Blueprint(
     'ads_api',
@@ -48,7 +48,7 @@ def get_ad_id():
     return jsonify({'ad_id': ad_id})
 
 
-@blueprint.route('/get_ad/<ad_id>', methods=['GET'])
+@blueprint.route('/get_ad/ads_id/<ad_id>', methods=['GET'])
 def get_ad(ad_id):
     """Отдает объявление по айди товара"""
     db_sess = db_session.create_session()
@@ -65,3 +65,18 @@ def delete_ad(ad_id):
     if master.delete_ad():
         return jsonify({'status': 'OK'})
     return jsonify({'status': 'ERROR'})
+
+
+@blueprint.route('/get_ad/title', methods=['GET'])
+def get_ad_by_title():
+    """Возвращает все объявления, подходящие по параметру"""
+    title = request.args.get('value')
+    db_sess = db_session.create_session()
+    master = AdsGet(db_sess)
+    data = master.get_by_title(title)
+    print(data)
+    if data['ads']:
+        return jsonify(data)
+    return jsonify({'status': 'ERROR'})
+
+
