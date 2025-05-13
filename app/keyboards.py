@@ -13,3 +13,14 @@ ready_ad = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="Опубликовать", callback_data="publish")],
     [InlineKeyboardButton(text="Удалить", callback_data="delete")]
 ])
+
+
+delete_ad = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="Удалить", callback_data="delete_ad")]
+])
+
+
+are_you_sure = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="Удалить", callback_data="delete_ad")],
+    [InlineKeyboardButton(text="Отменить", callback_data="delete_ad")]
+])
