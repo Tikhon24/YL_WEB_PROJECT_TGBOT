@@ -31,3 +31,16 @@ def post(rout, payload):
         print(f"HTTP ошибка: {http_ex}")
     except Exception as ex:
         print(f"Ошибка: {ex}")
+
+
+def delete(route, params=None):
+    try:
+        response = requests.delete(f"{SERVER}{route}", params=params)
+        response.raise_for_status()
+
+        data = response.json()
+        return data
+    except requests.exceptions.HTTPError as http_ex:
+        print(f"HTTP ошибка: {http_ex}")
+    except Exception as ex:
+        print(f"Ошибка: {ex}")

@@ -3,7 +3,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 
 import os
 from dotenv import load_dotenv
@@ -132,37 +132,73 @@ async def publish(callback: CallbackQuery, state: FSMContext):
                                       parse_mode='Markdown')
     except Exception as e:
         print(f"ОШИБКА: {e}")
-        await bot.delete_message(chat_id="@YL_WEB_PROJECT_TGBO", message_id=message_id)
+        await bot.delete_message(chat_id=f"@{TGK_ADDRESS}", message_id=message_id)
         await callback.message.answer("*Произошла ошибка, попробуйте позже!*",
                                       parse_mode='Markdown')
 
 
 @router.message(Command("my_ads"))
 async def show_ads(message: Message) -> None:
-    user_id = message.from_user.id
-    ads = rf.get(f"/get_ad/user_id", params={'value': f'{user_id}'})
-    if ads["status"] == "OK":
+    try:
+        user_id = message.from_user.id
+        ads = rf.get(f"/get_ad/user_id", params={'value': f'{user_id}'})
+        if ads["status"] == "ERROR":
+            raise TypeError("ERROR")
         kb_ads = InlineKeyboardMarkup(inline_keyboard=[])
         for ad in ads['ads']:
             kb_ads.inline_keyboard.append(
-                [InlineKeyboardButton(text=ad["title"], callback_data=f"click_ad:{ad['ads_id']}")])
+                [InlineKeyboardButton(text=ad["title"], callback_data=f"click_ad:{ad['ads_id']}:{ad['message_id']}")])
         await message.answer("*Ваши ады*", reply_markup=kb_ads)
-    elif ads["status"] == "ERROR":
-        pass
+    except TypeError as e:
+        await message.answer("*Произошла ошибка, попробуйте позже!*",
+                             parse_mode='Markdown')
 
 
 @router.callback_query(lambda c: c.data.startswith('click_ad:'))
 async def process_callback_button(callback: CallbackQuery):
     data = callback.data.split(':')
     ad_id = data[1]  # Получаем дополнительную информацию
-    print(ad_id)
+    message_id = data[2]
     ad = rf.get(f"/get_ad/ads_id/{ad_id}")
-    print(ad)
     ad_message, image_id = await of.create_ad_message(ad)
-    print(ad_message)
-    await callback.answer()
-
+    kb_delete = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Удалить",
+                                                                            callback_data=f"delete_ad:{ad_id}:{message_id}")]])
+    await callback.message.delete()
     if image_id:  # проверка наличия фото
-        await callback.message.answer_photo(photo=image_id, caption=ad_message, parse_mode='Markdown')
+        await callback.message.answer_photo(photo=image_id, caption=ad_message, parse_mode='Markdown',
+                                            reply_markup=kb_delete)
     else:
-        await callback.message.answer(ad_message, parse_mode='Markdown')
+        await callback.message.answer(ad_message, parse_mode='Markdown', reply_markup=kb_delete)
+
+
+@router.callback_query(lambda c: c.data.startswith('delete_ad:'))
+async def delete_ad(callback: CallbackQuery):
+    data = callback.data.split(':')
+    ad_id = data[1]
+    message_id = data[2]
+    kb_sure = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Удалить", callback_data=f"confirm_del:{ad_id}:{message_id}")],
+        [InlineKeyboardButton(text="Отменить", callback_data="cancel_del")]
+    ])
+    await callback.message.delete()
+    await callback.message.answer("Вы уверены?", parse_mode='Markdown',
+                                  reply_markup=kb_sure)
+
+
+@router.callback_query(lambda c: c.data.startswith('confirm_del:'))
+async def delete(callback: CallbackQuery):
+    data = callback.data.split(':')
+    ad_id = data[1]
+    message_id = data[2]
+    result = rf.delete(f"/delete_ad/{ad_id}")
+    await bot.delete_message(chat_id=f"@{TGK_ADDRESS}", message_id=message_id)
+    if result["status"] == "OK":
+        await callback.message.edit_text("Объявление удалено 🗑")
+    elif result["status"] == "ERROR":
+        await callback.message.edit_text("*Произошла ошибка, попробуйте позже!*",
+                                         parse_mode='Markdown')
+
+
+@router.callback_query(lambda c: c.data == "cancel_del")
+async def cancel_del(callback: CallbackQuery):
+    await callback.message.delete()
