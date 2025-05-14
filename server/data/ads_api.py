@@ -26,6 +26,7 @@ def add_ad():
             price=int(request.json['price']),
             image=request.json['image'],
             user_tag=request.json['user_tag'],
+            user_id=request.json['user_id'],
             ads_id=request.json['ads_id'],
             message_id=request.json['message_id']
         )
@@ -33,7 +34,7 @@ def add_ad():
         db_sess.commit()
         return jsonify({'status': 'OK'})
     except Exception as ex:
-        print(ex)
+        print('Error:', ex)
         return jsonify({'status': 'ERROR'})
 
 
@@ -69,14 +70,23 @@ def delete_ad(ad_id):
 
 @blueprint.route('/get_ad/title', methods=['GET'])
 def get_ad_by_title():
-    """Возвращает все объявления, подходящие по параметру"""
+    """Возвращает все объявления, подходящие по названию"""
     title = request.args.get('value')
     db_sess = db_session.create_session()
     master = AdsGet(db_sess)
     data = master.get_by_title(title)
-    print(data)
     if data['ads']:
         return jsonify(data)
     return jsonify({'status': 'ERROR'})
 
 
+@blueprint.route('/get_ad/user_id', methods=['GET'])
+def get_ad_by_user_tag():
+    """Возвращает все объявления, подходящие по тэгу пользователя"""
+    user_id = request.args.get('value')
+    db_sess = db_session.create_session()
+    master = AdsGet(db_sess)
+    data = master.get_by_user_id(user_id)
+    if data['ads']:
+        return jsonify(data)
+    return jsonify({'status': 'ERROR'})

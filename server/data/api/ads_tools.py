@@ -34,6 +34,7 @@ class AdsMaster:
             'image': ad.image,
             'date': ad.date,
             'user_tag': ad.user_tag,
+            'user_id': ad.user_id,
             'ads_id': ad.ads_id,
             'message_id': ad.message_id
         }
@@ -52,6 +53,8 @@ class AdsDelete(AdsMaster):
     def delete_ad(self):
         """Удаление определенного объявления по айди товара"""
         try:
+            if not self.db_sess.query(Ads).filter(Ads.ads_id == self.get_ad_id()).first():
+                return False
             self.db_sess.query(Ads).filter(Ads.ads_id == self.get_ad_id()).delete()
             self.db_sess.commit()
             return True
@@ -72,12 +75,12 @@ class AdsGet(AdsMaster):
         try:
             ads = self.db_sess.query(Ads).filter(Ads.title == title).all()
             result = [item.to_dict() for item in ads]
-            print(result)
             return {
-                'ads': result
+                'ads': result,
+                'status': 'OK'
             }
         except Exception as ex:
-            print(ex)
+            print('Error:', ex)
             return {'status': 'ERROR', 'ads': []}
 
     def get_by_price(self, price):
@@ -85,10 +88,23 @@ class AdsGet(AdsMaster):
         try:
             ads = self.db_sess.query(Ads).filter(Ads.price == price).all()
             result = [item.to_dict() for item in ads]
-            print(result)
             return {
-                'ads': result
+                'ads': result,
+                'status': 'OK'
             }
         except Exception as ex:
-            print(ex)
-            return {'status': 'ERROR'}
+            print('Error:', ex)
+            return {'status': 'ERROR', 'ads': []}
+
+    def get_by_user_id(self, user_id):
+        """Возвращает все объявления по тэгу"""
+        try:
+            ads = self.db_sess.query(Ads).filter(Ads.user_id == user_id).all()
+            result = [item.to_dict() for item in ads]
+            return {
+                'ads': result,
+                'status': 'OK'
+            }
+        except Exception as ex:
+            print('Error:', ex)
+            return {'status': 'ERROR', 'ads': []}

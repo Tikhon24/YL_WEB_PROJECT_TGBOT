@@ -2,7 +2,6 @@
 import json
 
 import requests
-import brotli
 
 
 def main():
@@ -30,12 +29,25 @@ def main():
     # response = requests.get('{}{}'.format(server, route))
     # print(response.json())
 
-    route = '/get_ad/title'
-    response = requests.get('{}{}'.format(server, route), params={'value': data['title']})
+    # route = '/get_ad/title'
+    # response = requests.get('{}{}'.format(server, route), params={'value': data['title']})
+    # if response.status_code == 200:
+    #     print(response.json())
+    # else:
+    #     print('ERROR')
+
+    route = '/get_ad/user_tag'
+    response = requests.get('{}{}'.format(server, route), params={'value': data['user_tag']})
+    print('user_tag')
     if response.status_code == 200:
         print(response.json())
     else:
         print('ERROR')
+
+    test_id = 'NuQGaLRYae'
+    route = f'/delete_ad/{test_id}'
+    response = requests.delete('{}{}'.format(server, route))
+    print(response.json())
 
 
 main()

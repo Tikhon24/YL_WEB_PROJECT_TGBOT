@@ -18,5 +18,6 @@ class Ads(SqlAlchemyBase, SerializerMixin):
 
     date = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now)
     user_tag = sqlalchemy.Column(sqlalchemy.String, nullable=False)
+    user_id = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     ads_id = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     message_id = sqlalchemy.Column(sqlalchemy.String, nullable=False)
