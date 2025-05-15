@@ -103,7 +103,7 @@ async def add_ad_fifth(message: Message, state: FSMContext):
             await message.answer(ad_message, parse_mode='Markdown', reply_markup=kb.ready_ad)
 
         await state.set_state(None)
-    except ValueError:  # работает при ошибка с преобразованием в число (строка 84)
+    except ValueError:  # работает при ошибка с преобразованием в число (строка 85)
         await message.answer("Пожалуйста, введите корректную цену (число). Попробуйте снова:")
     except TypeError:
         await message.answer("*Произошла ошибка, попробуйте позже!*",
