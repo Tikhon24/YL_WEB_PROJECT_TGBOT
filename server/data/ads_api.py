@@ -77,7 +77,7 @@ def get_ad_by_title():
     data = master.get_by_title(title)
     if data['ads']:
         return jsonify(data)
-    return jsonify({'status': 'ERROR'})
+    return jsonify({'status': str(data['status'])})
 
 
 @blueprint.route('/get_ad/user_id', methods=['GET'])
@@ -89,4 +89,4 @@ def get_ad_by_user_tag():
     data = master.get_by_user_id(user_id)
     if data['ads']:
         return jsonify(data)
-    return jsonify({'status': 'ERROR'})
+    return jsonify({'status': str(data['status'])})

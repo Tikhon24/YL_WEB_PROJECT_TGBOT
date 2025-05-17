@@ -5,6 +5,10 @@ import string
 from ..ads import Ads
 
 
+class EmptyRequest(Exception):
+    pass
+
+
 class AdsMaster:
     """Класс для некоторой работы с таблицей ads.
     Позволяет создавать айди объявления, и искать объявление по айди"""
@@ -75,10 +79,15 @@ class AdsGet(AdsMaster):
         try:
             ads = self.db_sess.query(Ads).filter(Ads.title == title).all()
             result = [item.to_dict() for item in ads]
+            if not result:
+                raise EmptyRequest('EMPTY')
             return {
                 'ads': result,
                 'status': 'OK'
             }
+        except EmptyRequest as er:
+            print('Error:', er)
+            return {'status': er, 'ads': []}
         except Exception as ex:
             print('Error:', ex)
             return {'status': 'ERROR', 'ads': []}
@@ -88,23 +97,33 @@ class AdsGet(AdsMaster):
         try:
             ads = self.db_sess.query(Ads).filter(Ads.price == price).all()
             result = [item.to_dict() for item in ads]
+            if not result:
+                raise EmptyRequest('EMPTY')
             return {
                 'ads': result,
                 'status': 'OK'
             }
+        except EmptyRequest as er:
+            print('Error:', er)
+            return {'status': er, 'ads': []}
         except Exception as ex:
             print('Error:', ex)
             return {'status': 'ERROR', 'ads': []}
 
     def get_by_user_id(self, user_id):
-        """Возвращает все объявления по тэгу"""
+        """Возвращает все объявления по айди пользователя"""
         try:
             ads = self.db_sess.query(Ads).filter(Ads.user_id == user_id).all()
             result = [item.to_dict() for item in ads]
+            if not result:
+                raise EmptyRequest('EMPTY')
             return {
                 'ads': result,
                 'status': 'OK'
             }
+        except EmptyRequest as er:
+            print('Error:', er)
+            return {'status': er, 'ads': []}
         except Exception as ex:
             print('Error:', ex)
             return {'status': 'ERROR', 'ads': []}

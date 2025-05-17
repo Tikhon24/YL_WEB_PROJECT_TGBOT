@@ -18,6 +18,7 @@ def main():
         'price': '100500',
         'image': '123',
         'user_tag': '@robertpaulsen',
+        'user_id': '12345',
         'ads_id': ads_id,
         'message_id': '12345100500'
     }
@@ -36,9 +37,9 @@ def main():
     # else:
     #     print('ERROR')
 
-    route = '/get_ad/user_tag'
-    response = requests.get('{}{}'.format(server, route), params={'value': data['user_tag']})
-    print('user_tag')
+    route = '/get_ad/title'
+    response = requests.get('{}{}'.format(server, route), params={'value': 'Robert Paulsen'})
+    print('user_id')
     if response.status_code == 200:
         print(response.json())
     else:
