@@ -27,18 +27,19 @@ class AddAdForm(StatesGroup):
     image = State()
     price = State()
     user_id = State()
-    user_teg = State()
+    user_tag = State()
     ads_id = State()
 
 
 @router.message(CommandStart())
 async def start(message: Message) -> None:
-    await message.answer("*старт*", reply_markup=kb.start)
+    await message.answer(of.start_message(message.from_user.first_name, TGK_ADDRESS),
+                         parse_mode='Markdown', reply_markup=kb.start)
 
 
 @router.message(Command("help"))
 async def get_help(message: Message) -> None:
-    await message.answer("*помощь*", reply_markup=kb.without_image)
+    await message.answer(of.help_message(), parse_mode='Markdown', reply_markup=kb.commands)
 
 
 @router.message(Command("add_ad"))
@@ -73,10 +74,12 @@ async def add_ad_fourth1(message: Message, state: FSMContext):
 
 @router.callback_query(lambda c: c.data == "no_image")
 async def process_no_image(callback_query: CallbackQuery, state: FSMContext):
+    current_state = await state.get_state()
     await callback_query.answer()
-    await state.update_data(image="")
-    await state.set_state(AddAdForm.price)
-    await callback_query.message.answer("Введите цену товара(₽):")
+    if current_state == AddAdForm.image.state:
+        await state.update_data(image="")
+        await state.set_state(AddAdForm.price)
+        await callback_query.message.answer("Введите цену товара(₽):")
 
 
 @router.message(AddAdForm.price)
@@ -94,6 +97,7 @@ async def add_ad_fifth(message: Message, state: FSMContext):
         # добавление остальной инфы
 
         data = await state.get_data()
+        print(data)
         ad_message, image_id = await of.create_ad_message(data)  # создание объявления
 
         if image_id:  # проверка наличия фото
@@ -105,7 +109,8 @@ async def add_ad_fifth(message: Message, state: FSMContext):
         await state.set_state(None)
     except ValueError:  # работает при ошибка с преобразованием в число (строка 85)
         await message.answer("Пожалуйста, введите корректную цену (число). Попробуйте снова:")
-    except TypeError:
+    except TypeError as e:
+        print(e)
         await message.answer("*Произошла ошибка, попробуйте позже!*",
                              parse_mode='Markdown')
 
@@ -135,6 +140,17 @@ async def publish(callback: CallbackQuery, state: FSMContext):
         await bot.delete_message(chat_id=f"@{TGK_ADDRESS}", message_id=message_id)
         await callback.message.answer("*Произошла ошибка, попробуйте позже!*",
                                       parse_mode='Markdown')
+
+
+@router.callback_query(lambda c: c.data == "delete")
+async def delete(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    ad_message, image_id = await of.create_ad_message(data)
+    if image_id == "":
+        await callback.message.edit_text("Объявление было удалено 🗑")
+    else:
+        await callback.message.delete()
+        await callback.message.answer("Объявление было удалено 🗑")
 
 
 @router.message(Command("my_ads"))
