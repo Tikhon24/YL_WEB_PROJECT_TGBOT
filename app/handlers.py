@@ -45,7 +45,8 @@ async def get_help(message: Message) -> None:
 @router.message(Command("add_ad"))
 async def add_ad_first(message: Message, state: FSMContext):
     await state.set_state(AddAdForm.title)
-    await message.answer("Введите название обявления:")
+    await message.answer(of.ad_form(), parse_mode='Markdown')
+    await message.answer("Введите название объявления:")
 
 
 @router.message(AddAdForm.title)
@@ -97,7 +98,6 @@ async def add_ad_fifth(message: Message, state: FSMContext):
         # добавление остальной инфы
 
         data = await state.get_data()
-        print(data)
         ad_message, image_id = await of.create_ad_message(data)  # создание объявления
 
         if image_id:  # проверка наличия фото
@@ -158,16 +158,18 @@ async def show_ads(message: Message) -> None:
     try:
         user_id = message.from_user.id
         ads = rf.get(f"/get_ad/user_id", params={'value': f'{user_id}'})
+        if ads["status"] == "EMPTY":
+            await message.answer("*У вас нет ни одного объявления на продаже!*", parse_mode='Markdown')
+            return None
         if ads["status"] == "ERROR":
             raise TypeError("ERROR")
         kb_ads = InlineKeyboardMarkup(inline_keyboard=[])
         for ad in ads['ads']:
             kb_ads.inline_keyboard.append(
                 [InlineKeyboardButton(text=ad["title"], callback_data=f"click_ad:{ad['ads_id']}:{ad['message_id']}")])
-        await message.answer("*Ваши ады*", reply_markup=kb_ads)
-    except TypeError as e:
-        await message.answer("*Произошла ошибка, попробуйте позже!*",
-                             parse_mode='Markdown')
+        await message.answer("*Ваши объявления 📄*", reply_markup=kb_ads, parse_mode='Markdown')
+    except TypeError:
+        await message.answer("*Произошла ошибка, попробуйте позже!*", parse_mode='Markdown')
 
 
 @router.callback_query(lambda c: c.data.startswith('click_ad:'))
