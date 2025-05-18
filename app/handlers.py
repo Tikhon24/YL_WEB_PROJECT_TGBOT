@@ -3,7 +3,10 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 
+import os
+from dotenv import load_dotenv
 from create_bot import bot
 
 import app.other_funcs as of
@@ -13,30 +16,37 @@ import app.keyboards as kb
 
 router = Router()
 
+load_dotenv()
+
+TGK_ADDRESS = os.getenv("TGK_ADDRESS")
+
 
 class AddAdForm(StatesGroup):
     title = State()
     description = State()
     image = State()
     price = State()
+    user_id = State()
     user_tag = State()
     ads_id = State()
 
 
 @router.message(CommandStart())
 async def start(message: Message) -> None:
-    await message.answer("*старт*", reply_markup=kb.start)
+    await message.answer(of.start_message(message.from_user.first_name, TGK_ADDRESS),
+                         parse_mode='Markdown', reply_markup=kb.start)
 
 
 @router.message(Command("help"))
 async def get_help(message: Message) -> None:
-    await message.answer("*помощь*", reply_markup=kb.without_image)
+    await message.answer(of.help_message(), parse_mode='Markdown', reply_markup=kb.commands)
 
 
 @router.message(Command("add_ad"))
 async def add_ad_first(message: Message, state: FSMContext):
     await state.set_state(AddAdForm.title)
-    await message.answer("Введите название обявления:")
+    await message.answer(of.ad_form(), parse_mode='Markdown')
+    await message.answer("Введите название объявления:")
 
 
 @router.message(AddAdForm.title)
@@ -65,62 +75,148 @@ async def add_ad_fourth1(message: Message, state: FSMContext):
 
 @router.callback_query(lambda c: c.data == "no_image")
 async def process_no_image(callback_query: CallbackQuery, state: FSMContext):
+    current_state = await state.get_state()
     await callback_query.answer()
-    await state.update_data(image="")
-    await state.set_state(AddAdForm.price)
-    await callback_query.message.answer("Введите цену товара(₽):")
+    if current_state == AddAdForm.image.state:
+        await state.update_data(image="")
+        await state.set_state(AddAdForm.price)
+        await callback_query.message.answer("Введите цену товара(₽):")
 
 
 @router.message(AddAdForm.price)
 async def add_ad_fifth(message: Message, state: FSMContext):
     try:
-        price = int(message.text)
+        price = int(message.text)  # проверка на число
+        user_id = message.from_user.id
         user_tag = message.from_user.username
-        ads_id = rf.get("/get_ad_id")['ad_id']
+        ads_id = rf.get("/get_ad_id")['ad_id']  # запрос id товара
 
         await state.update_data(price=price)
+        await state.update_data(user_id=user_id)
         await state.update_data(user_tag=user_tag)
         await state.update_data(ads_id=ads_id)
+        # добавление остальной инфы
 
         data = await state.get_data()
-        ad_message, image_id = await of.create_ad_message(data)
-        print(data)
+        ad_message, image_id = await of.create_ad_message(data)  # создание объявления
 
-        if image_id:  # Check if image_id is not empty
+        if image_id:  # проверка наличия фото
             await message.answer_photo(photo=image_id, caption=ad_message, parse_mode='Markdown',
                                        reply_markup=kb.ready_ad)
         else:
             await message.answer(ad_message, parse_mode='Markdown', reply_markup=kb.ready_ad)
 
-        await state.clear()
-    except ValueError:
+        await state.set_state(None)
+    except ValueError:  # работает при ошибка с преобразованием в число (строка 85)
         await message.answer("Пожалуйста, введите корректную цену (число). Попробуйте снова:")
+    except TypeError as e:
+        print(e)
+        await message.answer("*Произошла ошибка, попробуйте позже!*",
+                             parse_mode='Markdown')
 
 
 @router.callback_query(lambda c: c.data == "publish")
 async def publish(callback: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    print(data)
-    ad_message, image_id = await of.create_ad_message(data)
-    if image_id == "":
-        publish_ad = await bot.send_message(chat_id="@YL_WEB_PROJECT_TGBO", caption=ad_message, parse_mode='Markdown')
-    else:
-        publish_ad = await bot.send_photo(chat_id="@YL_WEB_PROJECT_TGBO",
-                                          photo=image_id, caption=ad_message, parse_mode='Markdown')
-    message_id = publish_ad.message_id
-    print(message_id)
-    data["message_id"] = message_id
-    result = rf.post("/add_ad", data)
-    print(result)
-    await callback.answer()
-    await callback.message.delete()
-    if result["status"] == "OK":
-        await callback.message.answer(f"Опубликовано✅\n\n[обявление]"
-                                      f"(https://t.me/YL_WEB_PROJECT_TGBO/{publish_ad.message_id})",
+    try:
+        data = await state.get_data()
+        ad_message, image_id = await of.create_ad_message(data)
+        if image_id == "":
+            publish_ad = await bot.send_message(chat_id=f"@{TGK_ADDRESS}", text=ad_message, parse_mode='Markdown')
+        else:
+            publish_ad = await bot.send_photo(chat_id=f"@{TGK_ADDRESS}",
+                                              photo=image_id, caption=ad_message, parse_mode='Markdown')
+        message_id = publish_ad.message_id
+        data["message_id"] = message_id
+        result = rf.post("/add_ad", data)
+        await callback.answer()
+        await callback.message.delete()
+        if result["status"] == "ERROR":
+            raise ValueError("Ошибка записи объявления в бд")
+        await callback.message.answer(f"Опубликовано✅\n\n[объявление]"
+                                      f"(https://t.me/{TGK_ADDRESS}/{publish_ad.message_id})",
                                       parse_mode='Markdown')
-    else:
-        await bot.delete_message(chat_id="@YL_WEB_PROJECT_TGBO", message_id=message_id)
+    except Exception as e:
+        print(f"ОШИБКА: {e}")
+        await bot.delete_message(chat_id=f"@{TGK_ADDRESS}", message_id=message_id)
         await callback.message.answer("*Произошла ошибка, попробуйте позже!*",
                                       parse_mode='Markdown')
 
 
+@router.callback_query(lambda c: c.data == "delete")
+async def delete(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    ad_message, image_id = await of.create_ad_message(data)
+    if image_id == "":
+        await callback.message.edit_text("Объявление было удалено 🗑")
+    else:
+        await callback.message.delete()
+        await callback.message.answer("Объявление было удалено 🗑")
+
+
+@router.message(Command("my_ads"))
+async def show_ads(message: Message) -> None:
+    try:
+        user_id = message.from_user.id
+        ads = rf.get(f"/get_ad/user_id", params={'value': f'{user_id}'})
+        if ads["status"] == "EMPTY":
+            await message.answer("*У вас нет ни одного объявления на продаже!*", parse_mode='Markdown')
+            return None
+        if ads["status"] == "ERROR":
+            raise TypeError("ERROR")
+        kb_ads = InlineKeyboardMarkup(inline_keyboard=[])
+        for ad in ads['ads']:
+            kb_ads.inline_keyboard.append(
+                [InlineKeyboardButton(text=ad["title"], callback_data=f"click_ad:{ad['ads_id']}:{ad['message_id']}")])
+        await message.answer("*Ваши объявления 📄*", reply_markup=kb_ads, parse_mode='Markdown')
+    except TypeError:
+        await message.answer("*Произошла ошибка, попробуйте позже!*", parse_mode='Markdown')
+
+
+@router.callback_query(lambda c: c.data.startswith('click_ad:'))
+async def process_callback_button(callback: CallbackQuery):
+    data = callback.data.split(':')
+    ad_id = data[1]  # Получаем дополнительную информацию
+    message_id = data[2]
+    ad = rf.get(f"/get_ad/ads_id/{ad_id}")
+    ad_message, image_id = await of.create_ad_message(ad)
+    kb_delete = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Удалить",
+                                                                            callback_data=f"delete_ad:{ad_id}:{message_id}")]])
+    await callback.message.delete()
+    if image_id:  # проверка наличия фото
+        await callback.message.answer_photo(photo=image_id, caption=ad_message, parse_mode='Markdown',
+                                            reply_markup=kb_delete)
+    else:
+        await callback.message.answer(ad_message, parse_mode='Markdown', reply_markup=kb_delete)
+
+
+@router.callback_query(lambda c: c.data.startswith('delete_ad:'))
+async def delete_ad(callback: CallbackQuery):
+    data = callback.data.split(':')
+    ad_id = data[1]
+    message_id = data[2]
+    kb_sure = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Удалить", callback_data=f"confirm_del:{ad_id}:{message_id}")],
+        [InlineKeyboardButton(text="Отменить", callback_data="cancel_del")]
+    ])
+    await callback.message.delete()
+    await callback.message.answer("Вы уверены?", parse_mode='Markdown',
+                                  reply_markup=kb_sure)
+
+
+@router.callback_query(lambda c: c.data.startswith('confirm_del:'))
+async def delete(callback: CallbackQuery):
+    data = callback.data.split(':')
+    ad_id = data[1]
+    message_id = data[2]
+    result = rf.delete(f"/delete_ad/{ad_id}")
+    await bot.delete_message(chat_id=f"@{TGK_ADDRESS}", message_id=message_id)
+    if result["status"] == "OK":
+        await callback.message.edit_text("Объявление удалено 🗑")
+    elif result["status"] == "ERROR":
+        await callback.message.edit_text("*Произошла ошибка, попробуйте позже!*",
+                                         parse_mode='Markdown')
+
+
+@router.callback_query(lambda c: c.data == "cancel_del")
+async def cancel_del(callback: CallbackQuery):
+    await callback.message.delete()

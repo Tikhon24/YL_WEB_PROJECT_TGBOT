@@ -1,9 +1,17 @@
 from aiogram.types import InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton
 
 start = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text="Помощь")],
-    [KeyboardButton(text="Регестрация")]
-])
+    [KeyboardButton(text="/help")]
+],
+    resize_keyboard=True, one_time_keyboard=True
+)
+
+commands = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="/add_ad")],
+    [KeyboardButton(text="/my_ads")]
+],
+    resize_keyboard=True
+)
 
 without_image = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="Без картинки", callback_data="no_image")]
