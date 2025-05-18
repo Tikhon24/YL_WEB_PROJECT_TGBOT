@@ -1,7 +1,6 @@
 from flask import Flask
 from flask import make_response, jsonify
 from data import db_session, ads_api
-from data.ads import Ads
 
 app = Flask(__name__)
 

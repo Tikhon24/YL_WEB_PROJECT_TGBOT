@@ -1,5 +1,3 @@
-from flask import jsonify
-
 import random
 import string
 from ..ads import Ads
